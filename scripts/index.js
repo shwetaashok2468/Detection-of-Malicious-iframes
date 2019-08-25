@@ -7,6 +7,7 @@ var dir = './files';
 if (!fs.existsSync(dir)){
     fs.mkdirSync(dir);
 }
+
 let api_key='c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251';
 (async () => {
     this.options = {
@@ -28,7 +29,6 @@ let api_key='c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251';
             },
         }
     };
-    console.log("******************----******************");
     console.log("launching browser");
     const browser = await puppeteer.launch(
         this.options.params
@@ -65,7 +65,7 @@ let api_key='c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251';
     console.log(urls);
 
     let scan_ids=[];
-    let duplicate_urls={};
+    let duplicate_urls={}; //hashmap
     if(urls.length!==0) {
         for (let i = 0; i < urls.length; i++) {
             try {
@@ -95,6 +95,9 @@ let api_key='c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251';
                 if(res) {
                     res.data.scans.url=scan_ids[i].url;
                     res.data.scans.website=website;
+                    res.data.scans.response_code=res.data.response_code;
+                    res.data.scans.positives=res.data.positives;
+                    res.data.scans.total_scans=res.data.total;
                     await fs.writeFile(`./files/${scan_ids[i].scan_id}.json`, `${JSON.stringify(res.data.scans, null, 2)}`, function (err) {
                         if (err) throw err;
                         console.log('File is created successfully.');
@@ -109,5 +112,7 @@ let api_key='c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251';
     else{
         console.log("no iframes found on this website");
     }
+    console.log("No of iframes:",urls.length);
+
     await browser.close();
 })();
