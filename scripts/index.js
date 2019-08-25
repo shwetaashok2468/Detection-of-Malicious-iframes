@@ -1,11 +1,18 @@
 const puppeteer = require('puppeteer');
 const fs=require("fs");
 const axios=require('axios');
+
+
+var dir = './files';
+if (!fs.existsSync(dir)){
+    fs.mkdirSync(dir);
+}
+let api_key='c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251';
 (async () => {
     this.options = {
         params: {
             ignoreHTTPSErrors: true,
-            headless: true,
+            headless: false,
             args: [
                 '--ash-host-window-bounds=1920x1080',
                 '--window-size=1920,1048',
@@ -27,10 +34,11 @@ const axios=require('axios');
         this.options.params
     );
     const page = await browser.newPage();
-    let website=process.argv[2];
-    console.log(process.argv[2]);
+    let website=process.argv[2] || "www.amazon.in";
+    console.log(website);
     await page.goto("http://"+website,{
-        timeout:120000
+        timeout:120000,
+        waitUntil: ['load','domcontentloaded']
     }); //add your url
     console.log("launching browser successful");
     try {
@@ -45,6 +53,7 @@ const axios=require('axios');
         let word = 'javascript:false;';
 
         for(i=0;i<iframes.length;i++){
+
             if(!iframes[i].src.includes(word))
             {
                 x.push(iframes[i].src);
@@ -60,12 +69,12 @@ const axios=require('axios');
     if(urls.length!==0) {
         for (let i = 0; i < urls.length; i++) {
             try {
-                if (!duplicate_urls[urls[i]]) {
+                if (urls[i] && !duplicate_urls[urls[i]]) {
                     let obj = {};
                     obj.url = urls[i];
                     duplicate_urls[urls[i]] = i + 1;
                     console.log("sending API call:" + (i + 1));
-                    let res = await axios.post(`https://www.virustotal.com/vtapi/v2/url/scan?apikey=c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251&url=${urls[i]}`);
+                    let res = await axios.post(`https://www.virustotal.com/vtapi/v2/url/scan?apikey=${api_key}&url=${urls[i]}`);
                     console.log(res.data.scan_id);
                     obj.scan_id = res.data.scan_id;
                     scan_ids.push(obj);
@@ -82,13 +91,15 @@ const axios=require('axios');
         for (let i = 0; i < scan_ids.length; i++) {
             try {
                 console.log("sending API call:" + (i + 1));
-                let res = await axios.get(`https://www.virustotal.com/vtapi/v2/url/report?apikey=c5f18a0c79fc9b7dc4d18f94ba44741346cb5d901d6a41817b7e622577534251&resource=${scan_ids[i].scan_id}`);
+                let res = await axios.get(`https://www.virustotal.com/vtapi/v2/url/report?apikey=${api_key}&resource=${scan_ids[i].scan_id}`);
                 if(res) {
+                    res.data.scans.url=scan_ids[i].url;
+                    res.data.scans.website=website;
                     await fs.writeFile(`./files/${scan_ids[i].scan_id}.json`, `${JSON.stringify(res.data.scans, null, 2)}`, function (err) {
                         if (err) throw err;
                         console.log('File is created successfully.');
                     });
-                    console.log(res.data.scans);
+                   // console.log(res.data.scans);
                 }
             } catch (e) {
                 console.log(e);
